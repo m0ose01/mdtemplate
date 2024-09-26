@@ -1,3 +1,6 @@
+use std::fs;
+use std::process::Command;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -16,6 +19,18 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    println!("{}", args.input);
-    println!("{}", args.output);
+
+    let _ = fs::create_dir("slides");
+
+    let magick = Command::new("magick")
+        .arg(args.input)
+        .args(["-quality", "100"])
+        .arg("slides/img_%d.jpg")
+        .output()
+        .expect("Failed to launch imagemagick process.");
+
+    match magick.status.code() {
+        Some(code) => println!("Magick exited with code {code}."),
+        None => println!("Magick process was terminated by a signal."),
+    }
 }
