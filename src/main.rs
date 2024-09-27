@@ -1,7 +1,9 @@
 use std::fs;
+use std::io::Write;
 use std::process::Command;
 
 use clap::Parser;
+use lopdf::Document;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -31,7 +33,7 @@ fn main() {
 
     if args.create_images {
         let magick = Command::new("magick")
-            .arg(args.input)
+            .arg(&args.input)
             .args(["-quality", "100"])
             .arg("slides/img_%d.jpg")
             .output()
@@ -47,4 +49,30 @@ fn main() {
             println!("magick stderr: {:?}", magick.stderr);
         }
     }
+
+    if args.create_markdown {
+        let document = Document::load(&args.input).expect("Could not open PDF file {args.input}.");
+        let page_count = document.get_pages().len();
+
+        let mut md_file = fs::File::create(&args.output).expect("Could not create markdown file.");
+        let mut md_file_contents = "".to_string();
+
+        for page in 1..page_count {
+            md_file_contents.push_str(
+                &slide_template(page)
+            );
+        }
+        let _ = md_file.write(md_file_contents.as_bytes()).expect("Error writing to file.");
+    }
+}
+
+fn slide_template(slide: usize) -> String {
+    format!("\
+# Slide {slide} {{.slide}}
+
+![Slide {slide}](slides/img_{slide}.jpg)
+
+* 
+
+")
 }
